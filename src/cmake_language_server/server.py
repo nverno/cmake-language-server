@@ -254,8 +254,33 @@ def main() -> None:
     parser.add_argument(
         "--version", action="version", version=f"%(prog)s {__version__}"
     )
-    parser.parse_args()
+    parser.add_argument(
+        "--log-file",
+        help="redirect logs to file specified",
+        type=str,
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        help="increase verbosity of log output",
+        action="count",
+        default=0,
+    )
+    args = parser.parse_args()
 
-    logging.basicConfig(level=logging.INFO)
+    log_level = {0: logging.INFO, 1: logging.DEBUG}.get(
+        args.verbose,
+        logging.DEBUG,
+    )
+
+    if args.log_file:
+        logging.basicConfig(
+            filename=args.log_file,
+            filemode="w",
+            level=log_level,
+        )
+    else:
+        logging.basicConfig(level=log_level)
+
     logging.getLogger("pygls").setLevel(logging.WARNING)
     CMakeLanguageServer().start_io()  # type: ignore
