@@ -48,8 +48,12 @@ class CMakeLanguageServer(LanguageServer):
         def initialize(params: InitializeParams) -> None:
             opts = params.initialization_options
 
-            cmake = getattr(opts, "cmakeExecutable", "cmake")
-            builddir = getattr(opts, "buildDirectory", "")
+            if type(opts) is dict:
+                cmake = opts.get("cmakeExecutable", "cmake")
+                builddir = opts.get("buildDirectory", "")
+            else:
+                cmake = getattr(opts, "cmakeExecutable", "cmake")
+                builddir = getattr(opts, "buildDirectory", "")
             logging.info(f"cmakeExecutable={cmake}, buildDirectory={builddir}")
 
             self._api = API(cmake, Path(builddir))
@@ -251,8 +255,33 @@ def main() -> None:
     parser.add_argument(
         "--version", action="version", version=f"%(prog)s {__version__}"
     )
-    parser.parse_args()
+    parser.add_argument(
+        "--log-file",
+        help="redirect logs to file specified",
+        type=str,
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        help="increase verbosity of log output",
+        action="count",
+        default=0,
+    )
+    args = parser.parse_args()
 
-    logging.basicConfig(level=logging.INFO)
+    log_level = {0: logging.INFO, 1: logging.DEBUG}.get(
+        args.verbose,
+        logging.DEBUG,
+    )
+
+    if args.log_file:
+        logging.basicConfig(
+            filename=args.log_file,
+            filemode="w",
+            level=log_level,
+        )
+    else:
+        logging.basicConfig(level=log_level)
+
     logging.getLogger("pygls").setLevel(logging.WARNING)
     CMakeLanguageServer("cmake-language-server", __version__).start_io()
